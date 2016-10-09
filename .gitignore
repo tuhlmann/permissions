@@ -1,0 +1,4 @@
+*.lein-failures
+/.idea/
+*.iml
+/target/
