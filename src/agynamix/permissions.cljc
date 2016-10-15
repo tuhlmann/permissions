@@ -8,7 +8,9 @@
 
 (defrecord Permission [domain   ;; a keyword
                        actions   ;; a set of keywords
-                       entities]) ;; a set of keywords
+                       entities] ;; a set of keywords
+  Object
+  (toString [_] (str (name domain) ":" (str/join "," (map name actions)) ":" (str/join "," (map name entities)))))
 
 (def wildcard-permission (->Permission wildcard-token #{wildcard-token} #{wildcard-token}))
 (def empty-permission (->Permission empty-permission-token #{} #{}))

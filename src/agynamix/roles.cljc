@@ -7,6 +7,7 @@
      (:import [agynamix.permissions Permission])))
 
 (defonce role-mapping (atom {}))
+(defonce resolvers (atom {}))
 
 (defn- sanitize-permission [perm-str]
   (cond
@@ -27,32 +28,51 @@
 
            :else #{})]) role-map)))
 
-(defn- roles->permissions [roles]
+(defn roles->permissions [roles]
   (let [f (into {} (filter (fn [[k _]] (some #(= k %) roles)) @role-mapping))
-        s (union (vals f))]
+        s (apply union (vals f))]
     s))
+
+(defn default-permission-resolver [perm-or-str]
+  perm-or-str)
+
+(defn default-role-resolver [role-names]
+  role-names)
+
+(defn- permission-resolver [perm-or-str]
+  ((:permission-resolver @resolvers) perm-or-str))
+
+(defn- role-resolver [role-name]
+  ((:role-resolver @resolvers) role-name))
 
 (defn init-roles
   "Takes your systems role definitions which is a map where the keys are the role names
   and the value is a set of permissions (either as permission records or as strings
   that can be converted into a permission.
   This needs to be initialized PRIOR to any permission checks."
-  [role-map]
-
-  (reset! role-mapping (sanitize-role-map role-map)))
+  ([role-map]
+   (init-roles role-map default-permission-resolver default-role-resolver))
+  ([role-map permission-resolver role-resolver]
+   (reset! role-mapping (sanitize-role-map role-map))
+   (reset! resolvers {:permission-resolver permission-resolver
+                      :role-resolver role-resolver})))
 
 (defn has-permission?
   ([user-map perm]
    (has-permission? user-map :roles :permissions perm))
 
   ([user-map role-key perm-key perm]
-   (let [roles (get user-map role-key #{})
+   (let [roles (role-resolver (get user-map role-key #{}))
          role-perms (roles->permissions roles)
          permissions (get user-map perm-key #{})
          sani-perms (map p/make-permission permissions)
-         all-perms (union role-perms sani-perms)]
+         all-perms (union role-perms sani-perms)
+         ;_ (println "all permissions " (map #(str %) all-perms))
+         resource-perm (permission-resolver perm)]
 
-     (p/implied-by? perm all-perms))))
+     (if (or (set? resource-perm) (sequential? resource-perm))
+       (every? #(p/implied-by? % all-perms) resource-perm)
+       (p/implied-by? resource-perm all-perms)))))
 
 
 (defn lacks-permission?

@@ -5,31 +5,37 @@
 
 (deftest init-roles-test
   (let [roles {
-               :user/admin "user/*"
-               :user/all   #{"user/read" "user/write"}
+               :user/admin "user:*"
+               :user/all   #{"user:read" "user:write"}
                :admin/all  "*"
-               :company/super #{"company/read" "company/write" "company/edit" "company/delete"}
+               :company/super #{"company:read" "company:write" "company:edit" "company:delete"}
                }
         user {
               :roles       #{:user/all :company/super}
-              :permissions #{"library/read" "company/gibberish"}
+              :permissions #{"library:read" "company:gibberish"}
               }]
     (init-roles roles)
 
     (testing
-      (is (has-permission? user "library/read")))
+      (is (has-permission? user "library:read")))
 
     (testing
-      (is (has-permission? user "company/read")))
+      (is (has-permission? user "company:read")))
 
     (testing
-      (is (has-permission? user "company/edit")))
+      (is (has-permission? user "company:edit")))
 
     (testing
-      (is (has-permission? user "company/gibberish")))
+      (is (has-permission? user "company:gibberish")))
 
     (testing
-      (is (lacks-permission? user "company/*")))
+      (is (has-permission? user #{"company:gibberish" "company:edit"})))
+
+    (testing
+      (is (lacks-permission? user #{"company:gibberish" "company:upload"})))
+
+    (testing
+      (is (lacks-permission? user "company:*")))
 
     (testing
       (is (lacks-permission? user (make-permission :user :*))))
@@ -38,7 +44,7 @@
       (is (lacks-permission? user wildcard-permission)))
 
     (testing
-      (is (lacks-permission? user "library/connect")))
+      (is (lacks-permission? user "library:connect")))
 
     )
   )

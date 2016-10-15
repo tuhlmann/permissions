@@ -60,10 +60,10 @@ map whose keys are the role names and the values are sets of permissions (either
 A role map might look like this:
 
 ```
-(def roles {:user/admin "user/*"
-            :user/all   #{"user/read" "user/write"}
+(def roles {:user/admin "user:*"
+            :user/all   #{"user:read" "user:write"}
             :admin/all  "*"
-            :company/super #{"company/read" "company/write" "company/edit" "company/delete"}
+            :company/super #{"company:read" "company:write" "company:edit" "company:delete"}
             }
 ```
 
@@ -78,13 +78,67 @@ A user might look like this:
 
 ```         
 (def user {:roles #{:user/all :company/super}
-           :permissions #{"library/read" "company/gibberish"}
+           :permissions #{"library:read" "company:gibberish"}
            ... lots of other keys
            }
 
 ```
 
 Please have a look at [roles_test.cljc](https://github.com/tuhlmann/permissions/blob/master/test/agynamix/roles_test.cljc) for examples.
+
+
+### Bitmask Permissions
+
+Instead of attaching literal permission strings to a user record or to a resource you can also attach one or more numbers
+that represent bitmasks. This works as follows:
+
+In your application you need to define a mapping of role to permissions just as described above. But instead of
+choosing keywords as names for roles you choose a number that is a multiple of two (that has only 1 bit set):
+
+
+```
+(def roles {1 "user:*"
+            2   #{"user:read" "user:write"}
+            4  "*"
+            8 #{"company:read" "company:write" "company:edit" "company:delete"}
+            }
+```
+
+You can map the number to one or more permissions, whatever suits your application.
+
+Initialize the role mapping like so:
+
+```
+(:require [agynamix.roles :refer :all]
+          [agynamix.bitmask-roles :refer :all])
+            
+(init-roles roles bitmask-permission-resolver bitmask-role-resolver)
+```
+
+It's important that you define the bitmap resolvers when initializing the role mapping!
+
+Then in the user you declare the roles and permissions given to that user like so:
+
+```         
+(def user {:roles 10
+           :permissions #{"library:read" "company:gibberish"}
+           ... lots of other keys
+           }
+
+```
+
+That number `10` sets the bits at positions `2` and `8`, thus role permissions given to the
+roles `2` and `8` are added to that user.
+
+In addition you can still set arbitrary permissions using the `:permissions` key in the user record if you want.
+Or you could simple omit the key if it's not needed.
+
+Similarly you give a resource one or more bitmask numbers. These numbers are reduced to the associated permissions
+as described in the role mapping above. If they reduce to multiple permissions, then all resource permissions
+must be met by the user (its like they are `and`ed together).
+
+
+Please have a look at [bitmask_roles_test.cljc](https://github.com/tuhlmann/permissions/blob/master/test/agynamix/bitmask_roles_test.cljc) for examples.
 
 
 ## License
