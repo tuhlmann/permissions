@@ -8,6 +8,14 @@ for detailed information.
 
 See [permissions_test.cljc](https://github.com/tuhlmann/permissions/blob/master/test/agynamix/permissions_test.cljc) for examples.
 
+[![Clojars Project](http://clojars.org/agynamix/permissions/latest-version.svg)](http://clojars.org/agynamix/permissions)
+
+## Installation
+
+To install, add the following to your project `:dependencies`:
+
+    [agynamix/permissions "0.1.2-SNAPSHOT"]
+
 ## Usage
 
 A permission consists of three parts; a domain, a set of actions, and a set of entities.
