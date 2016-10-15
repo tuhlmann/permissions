@@ -6,8 +6,8 @@
   #?(:clj
      (:import [agynamix.permissions Permission])))
 
-(defonce role-mapping (atom {}))
-(defonce resolvers (atom {}))
+(def role-mapping (atom {}))
+(def resolvers (atom {}))
 
 (defn- sanitize-permission [perm-str]
   (cond

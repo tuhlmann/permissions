@@ -5,13 +5,13 @@
 
 (deftest init-roles-test
   (let [roles {
-               :user/admin "user:*"
-               :user/all   #{"user:read" "user:write"}
-               :admin/all  "*"
-               :company/super #{"company:read" "company:write" "company:edit" "company:delete"}
+               "user/admin" "user:*"
+               "user/all"   #{"user:read" "user:write"}
+               "admin/all"  "*"
+               "company/super" #{"company:read" "company:write" "company:edit" "company:delete"}
                }
         user {
-              :roles       #{:user/all :company/super}
+              :roles       #{"user/all" "company/super"}
               :permissions #{"library:read" "company:gibberish"}
               }]
     (init-roles roles)

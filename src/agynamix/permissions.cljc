@@ -1,14 +1,14 @@
 (ns agynamix.permissions
   (:require [clojure.string :as str]))
 
-(def wildcard-token :*)
-(def empty-permission-token :none)
+(def wildcard-token "*")
+(def empty-permission-token "")
 (def part-divider ":")
 (def subpart-divider ",")
 
 (defrecord Permission [domain   ;; a keyword
-                       actions   ;; a set of keywords
-                       entities] ;; a set of keywords
+                       actions   ;; a set of string
+                       entities] ;; a set of string
   Object
   (toString [_] (str (name domain) ":" (str/join "," (map name actions)) ":" (str/join "," (map name entities)))))
 
@@ -20,10 +20,10 @@
   (cond
     (set? str-or-set) str-or-set
 
-    (keyword? str-or-set) #{str-or-set}
+    (keyword? str-or-set) #{(name str-or-set)}
 
     (string? str-or-set)
-    (into #{} (map keyword (str/split str-or-set (re-pattern subpart-divider))))
+    (into #{} (str/split str-or-set (re-pattern subpart-divider)))
 
     :else #{}))
 
@@ -45,7 +45,7 @@
    (make-permission domain (make-subpart-set actions) #{wildcard-token}))
 
   ([domain actions entities]
-   (->Permission (keyword domain) (make-subpart-set actions) (make-subpart-set entities))))
+   (->Permission domain (make-subpart-set actions) (make-subpart-set entities))))
 
 (defn- actions-and-entities-implied-by? [resource-perm user-perm]
   (let [resource-actions (:actions resource-perm)

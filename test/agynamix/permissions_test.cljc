@@ -8,23 +8,23 @@
 
   (testing "create wildcard permission"
     (is (= (make-permission "company")
-           (->Permission :company #{wildcard-token} #{wildcard-token}))))
+           (->Permission "company" #{wildcard-token} #{wildcard-token}))))
 
   (testing "create permission"
     (is (= (make-permission "company" "edit")
-           (->Permission :company #{:edit} #{wildcard-token}))))
+           (->Permission "company" #{"edit"} #{wildcard-token}))))
 
   (testing "create permission"
-    (is (= (make-permission "company" :edit)
-           (->Permission :company #{:edit} #{wildcard-token}))))
+    (is (= (make-permission "company" "edit")
+           (->Permission "company" #{"edit"} #{wildcard-token}))))
 
   (testing "create permission"
     (is (= (make-permission "company" "edit" "abcd1234")
-           (->Permission :company #{:edit} #{:abcd1234}))))
+           (->Permission "company" #{"edit"} #{"abcd1234"}))))
 
   (testing "create permission"
-    (is (= (make-permission "company" :edit :abcd1234)
-           (->Permission :company #{:edit} #{:abcd1234}))))
+    (is (= (make-permission "company" "edit" "abcd1234")
+           (->Permission "company" #{"edit"} #{"abcd1234"}))))
 
   )
 
@@ -38,7 +38,7 @@
       (is (not (implied-by? perm1 empty-permission))))
 
     (testing "test against perm1 domain"
-      (is (implied-by? perm1 (make-permission :perm1))))
+      (is (implied-by? perm1 (make-permission "perm1"))))
 
     (testing "test against different domain"
       (is (not (implied-by? perm1 (make-permission "a")))))
@@ -47,16 +47,16 @@
 
 (deftest domain-and-actions-test
   (testing "if company:* includes company:read"
-    (let [user-perm (make-permission :company)
-          res (make-permission :company #{:read})]
+    (let [user-perm (make-permission "company")
+          res (make-permission "company" #{"read"})]
       (is (implied-by? res user-perm))))
 
   (testing "if company:read is included in wildcard permission"
-    (let [res (make-permission :company #{:read})]
+    (let [res (make-permission "company" #{"read"})]
       (is (implied-by? res wildcard-permission))))
 
   (testing "if company:read is NOT included in empty permission"
-    (let [res (make-permission :company #{:read})]
+    (let [res (make-permission "company" #{"read"})]
       (is (not (implied-by? res empty-permission)))))
 
   (testing "if company:* includes company:read"
@@ -70,8 +70,8 @@
       (is (implied-by? res user-perm))))
 
   (testing "if company:read includes company:*"
-    (let [user-perm (make-permission :company #{:read})
-          res (make-permission :company)]
+    (let [user-perm (make-permission "company" #{"read"})
+          res (make-permission "company")]
       (is (not (implied-by? res user-perm)))))
 
   (testing "if company:read includes company:*"
@@ -80,14 +80,14 @@
       (is (not (implied-by? res user-perm)))))
 
   (testing "if multiple entities work. company:read,write includes company:upload,write"
-    (let [user-perm (make-permission :company #{:read :write})
-          res (make-permission :company #{:write :upload})]
+    (let [user-perm (make-permission "company" #{"read" "write"})
+          res (make-permission "company" #{"write" "upload"})]
 
       (is (implied-by? res user-perm))))
 
   (testing "if all wildcard works. * includes company:upload,write"
     (let [user-perm (make-permission)
-          res (make-permission :company #{:write :upload})]
+          res (make-permission "company" #{"write" "upload"})]
 
       (is (implied-by? res user-perm))))
   )
@@ -102,16 +102,16 @@
       (is (not (implied-by? edit empty-permission))))
 
     (testing "checking actions and entities in empty permission"
-      (is (not (implied-by? edit (make-permission :users "create")))))
+      (is (not (implied-by? edit (make-permission "users" "create")))))
 
     (testing "checking actions and entities in empty permission"
-      (is (not (implied-by? edit (make-permission :users "update")))))
+      (is (not (implied-by? edit (make-permission "users" "update")))))
 
     (testing "checking actions and entities in empty permission"
-      (is (not (implied-by? edit (make-permission :users :view)))))
+      (is (not (implied-by? edit (make-permission "users" "view")))))
 
     (testing "checking actions and entities in empty permission"
-      (is (implied-by? edit (make-permission :users wildcard-token))))
+      (is (implied-by? edit (make-permission "users" wildcard-token))))
 
     (testing "checking actions and entities in empty permission"
       (is (implied-by? edit (make-permission "users:*"))))
