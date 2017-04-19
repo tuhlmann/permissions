@@ -14,7 +14,7 @@ See [permissions_test.cljc](https://github.com/tuhlmann/permissions/blob/master/
 
 To install, add the following to your project `:dependencies`:
 
-    [agynamix/permissions "0.1.2-SNAPSHOT"]
+    [agynamix/permissions "0.2.0-SNAPSHOT"]
 
 ## Usage
 
@@ -37,7 +37,7 @@ mentioned domain, or all entities for a given list of actions. I've really never
 limit access to resources. But it's there if your use case requires it. 
 
 The permissions library consists of two parts. The permissions namespace defines the low level API of permission and
-the `implied-by?` method used to test if a resource permission (the firs parameter) is implied (has access to) 
+the `implied-by?` method used to test if a resource permission (the first parameter) is implied (has access to) 
 by the second permission or list of permissions.
 
 It also holds a factory method `make-permission` that should make it trivial to create a permission a la:
@@ -68,13 +68,24 @@ map whose keys are the role names and the values are sets of permissions (either
 A role map might look like this:
 
 ```
-(def roles {"user/admin" "user:*"
-            "user/all"   #{"user:read" "user:write"}
-            "admin/all"  "*"
+(def roles {"user/admin"    "user:*"
+            "user/all"      #{"user:read" "user:write"}
+            "admin/all"     "*"
             "company/super" #{"company:read" "company:write" "company:edit" "company:delete"}
+            "contacts/read" #{"contacts:read"}
+            "timeline/edit" #{"timeline:edit" "timeline:read"}
+            "project/all"   #{"contacts/read" "timeline/edit" "project:read"}
             }
 ```
 
+Please note that the map of roles and associated permissions can hold nested roles. If a role is found on the
+right side of the map (as value of another role key) it is looked up in the role map and replaced
+by the found values for this nested role key. This is done recursively for arbitrarily nested roles.
+
+This feature can be used for instance to limit access to different sections (domains) of an
+application by checking against different permissions which are grouped together as roles by domain.
+Then you could define a role that would slurp all roles for these domains and assign this role
+to users that are allowed access to every part of the applications.
           
 Initialize the role mapping with:
 

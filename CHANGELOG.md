@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file. This change
 ### Changed
 - xxx.
 
+## [0.2.0-SNAPSHOT] - 2017-04-19
+### Changed
+- Allowing hierarchies of roles. If one role contains another role in its values it
+  will resolve this role and add the found permissions to the set
+- Adding a function to check if any of the given permissions is satisfied.
+- Adding a function to check if all of the given permissions are lacking.
+
 ## [0.1.2-SNAPSHOT] - 2016-10-15
 ### Changed
 - Changed using keywords for domain, actions or entities to using plain strings.

@@ -9,27 +9,54 @@
 (def role-mapping (atom {}))
 (def resolvers (atom {}))
 
-(defn- sanitize-permission [perm-str]
-  (cond
-    (string? perm-str) (p/make-permission perm-str)
-    (keyword? perm-str) (p/make-permission (name perm-str))
-    (instance? Permission perm-str) perm-str
+;(defn- sanitize-permission [perm-str]
+;  (cond
+;    (string? perm-str) (p/make-permission perm-str)
+;    (keyword? perm-str) (p/make-permission (name perm-str))
+;    (instance? Permission perm-str) perm-str
+;
+;    :else p/empty-permission))
 
-    :else p/empty-permission))
+(defn- sanitize-role-map-value
+  "Checks the value(s) of a role-map entry
+  If they reference another role recursively call this function with the value of
+  the found role key, else convert the value into a permission"
+  [role-map val]
+  (cond
+    (string? val)
+    (if-let [role-val (get role-map val)]
+      (sanitize-role-map-value role-map role-val)
+      [(p/make-permission val)])
+
+    (keyword? val)
+    (if-let [role-val (get role-map val)]
+      (sanitize-role-map-value role-map role-val)
+      [(p/make-permission (name val))])
+
+    (instance? Permission val) #{val}
+    (or (seq? val) (set? val))
+    (into [] (map (partial sanitize-role-map-value role-map) val))
+
+    :else []))
 
 (defn- sanitize-role-map [role-map]
-  (into {} (map (fn [[key val]]
-         [key (cond
-           (string? val) #{(p/make-permission val)}
-           (keyword? val) #{(p/make-permission (name val))}
-           (instance? Permission val) #{val}
-           (or (seq? val) (set? val))
-           (into #{} (map sanitize-permission val))
+  (into {} (map
+             (fn [[key val]]
+               [key (into #{}
+                          (flatten
+                            (sanitize-role-map-value role-map val)))]) role-map)))
 
-           :else #{})]) role-map)))
+(defn roles->permissions
+  "Resolves a seq of roles into ints contained permissions.
+  If a role contains other roles as values, will recursively resolve these until
+  it ends up at the leafes, the permissions."
+  [roles]
 
-(defn roles->permissions [roles]
-  (let [f (into {} (filter (fn [[k _]] (some #(= k %) roles)) @role-mapping))
+  (let [f (into {}
+                (filter
+                  (fn [[k _]] (some #(= k %) roles))
+                  @role-mapping))
+
         s (apply union (vals f))]
     s))
 
@@ -57,26 +84,52 @@
    (reset! resolvers {:permission-resolver permission-resolver
                       :role-resolver role-resolver})))
 
+
+(defn permission-check-fn
+  [m role-key perm-key perm check-fn]
+  (let [roles (role-resolver (get m role-key #{}))
+        role-perms (roles->permissions roles)
+        permissions (get m perm-key #{})
+        sani-perms (map p/make-permission permissions)
+        all-perms (union role-perms sani-perms)
+        ;_ (println "all permissions " (map #(str %) all-perms))
+        resource-perm (permission-resolver perm)]
+
+    (check-fn all-perms resource-perm)))
+
+
 (defn has-permission?
-  ([user-map perm]
-   (has-permission? user-map :roles :permissions perm))
+  ([m perm]
+   (has-permission? m :roles :permissions perm))
 
-  ([user-map role-key perm-key perm]
-   (let [roles (role-resolver (get user-map role-key #{}))
-         role-perms (roles->permissions roles)
-         permissions (get user-map perm-key #{})
-         sani-perms (map p/make-permission permissions)
-         all-perms (union role-perms sani-perms)
-         ;_ (println "all permissions " (map #(str %) all-perms))
-         resource-perm (permission-resolver perm)]
+  ([m role-key perm-key perm]
+   (permission-check-fn m role-key perm-key perm
+                      (fn [all-perms resource-perm]
+                        (if (or (set? resource-perm) (sequential? resource-perm))
+                          (every? #(p/implied-by? % all-perms) resource-perm)
+                          (p/implied-by? resource-perm all-perms))))))
 
-     (if (or (set? resource-perm) (sequential? resource-perm))
-       (every? #(p/implied-by? % all-perms) resource-perm)
-       (p/implied-by? resource-perm all-perms)))))
+(defn has-any-permission?
+  ([m perm]
+   (has-any-permission? m :roles :permissions perm))
+
+  ([m role-key perm-key perm]
+   (permission-check-fn m role-key perm-key perm
+                      (fn [all-perms resource-perm]
+                        (if (or (set? resource-perm) (sequential? resource-perm))
+                          (some #(p/implied-by? % all-perms) resource-perm)
+                          (p/implied-by? resource-perm all-perms))))))
 
 
 (defn lacks-permission?
-  ([user-map perm]
-   (lacks-permission? user-map :roles :permissions perm))
-  ([user-map role-key perm-key perm]
-   (not (has-permission? user-map role-key perm-key perm))))
+  ([m perm]
+   (lacks-permission? m :roles :permissions perm))
+  ([m role-key perm-key perm]
+   (not (has-permission? m role-key perm-key perm))))
+
+(defn lacks-all-permissions?
+  ([m perm]
+   (lacks-all-permissions? m :roles :permissions perm))
+  ([m role-key perm-key perm]
+   (not (has-any-permission? m role-key perm-key perm))))
+
