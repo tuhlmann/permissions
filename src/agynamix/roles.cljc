@@ -6,8 +6,12 @@
   #?(:clj
      (:import [agynamix.permissions Permission])))
 
+(declare default-permission-resolver
+         default-role-resolver)
+
 (def role-mapping (atom {}))
-(def resolvers (atom {}))
+(def resolvers (atom {:permission-resolver default-permission-resolver
+                      :role-resolver default-role-resolver}))
 
 ;(defn- sanitize-permission [perm-str]
 ;  (cond

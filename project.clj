@@ -1,4 +1,4 @@
-(defproject agynamix/permissions "0.2.0-SNAPSHOT"
+(defproject agynamix/permissions "0.2.1-SNAPSHOT"
 
   :description
   "A library that handles user roles and permissions.
