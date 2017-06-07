@@ -26,29 +26,44 @@
   If they reference another role recursively call this function with the value of
   the found role key, else convert the value into a permission"
   [role-map val]
-  (cond
-    (string? val)
-    (if-let [role-val (get role-map val)]
-      (sanitize-role-map-value role-map role-val)
-      [(p/make-permission val)])
+  (let [rfn #(cond
+               (string? %) (conj #{} %)
+               (coll? %) (into #{} %)
+               :else %)
+        rvalue (rfn val)]
+    (loop [perms #{} rseen #{} rset rvalue r (first rvalue)]
+      (if (empty? rset) perms
+          (cond
+            ;; recursive role definition
+            (and (contains? role-map r)
+                 (not (contains? rseen r)))
+            (let [nroles (rfn (role-map r))
+                  nrset (apply conj rset nroles)
+                  nrset (disj nrset r)]
+              (recur perms (conj rseen r) nrset (first nrset)))
 
-    (keyword? val)
-    (if-let [role-val (get role-map val)]
-      (sanitize-role-map-value role-map role-val)
-      [(p/make-permission (name val))])
+            ;; already explored role
+            (and (contains? role-map r)
+                 (contains? rseen r))
+            (let [nrset (disj rset r)]
+              (recur perms rseen nrset (first nrset)))
 
-    (instance? Permission val) #{val}
-    (or (seq? val) (set? val))
-    (into [] (map (partial sanitize-role-map-value role-map) val))
+            ;; role that is not defined
+            (and (not (contains? role-map r))
+                 (.contains r "/"))
+            (let [nrset (disj rset r)]
+              (recur perms rseen nrset (first nrset)))
 
-    :else []))
+            :else
+            ;; permission
+            (let [nperms (conj perms (p/make-permission (if (keyword? r) (name r) r)))
+                  nrset (disj rset r)]
+              (recur nperms rseen nrset (first nrset))))))))
 
 (defn- sanitize-role-map [role-map]
   (into {} (map
              (fn [[key val]]
-               [key (into #{}
-                          (flatten
-                            (sanitize-role-map-value role-map val)))]) role-map)))
+               [key (sanitize-role-map-value role-map val)]) role-map)))
 
 (defn roles->permissions
   "Resolves a seq of roles into ints contained permissions.

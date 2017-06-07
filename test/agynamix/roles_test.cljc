@@ -6,12 +6,13 @@
 (deftest init-roles-test
   (let [roles {
                "user/admin" "user:*"
-               "user/all"   #{"user:read" "user:write"}
+               "user/all"   #{"user:read" "user:write" "project/admin"}
                "admin/all"  "*"
                "company/super" #{"company:read" "company:write" "company:edit" "company:delete"}
                "contacts/read" #{"contacts:read"}
                "timeline/edit" #{"timeline:edit" "timeline:read"}
                "project/all" #{"contacts/read" "timeline/edit" "project:read"}
+               "project/admin" #{"user/all"}
                }
         user {
               :roles       #{"user/all" "company/super"}
@@ -19,7 +20,10 @@
               }
         membership {
                     :roles #{"project/all"}
-                    }]
+                    }
+        project-admin {
+                       :roles #{"project/admin"}
+                       }]
 
     (init-roles roles)
 
@@ -82,6 +86,12 @@
 
     (testing
       (is (has-permission? membership "project:read")))
+
+    (testing
+      (is (has-permission? project-admin #{"user:read" "user:write"})))
+
+    (testing
+      (is (lacks-permission? project-admin #{"company:read" "company:write" "company:edit" "company:delete"})))
 
     )
   )
