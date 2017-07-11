@@ -26,39 +26,50 @@
   If they reference another role recursively call this function with the value of
   the found role key, else convert the value into a permission"
   [role-map val]
+
   (let [rfn #(cond
                (string? %) (conj #{} %)
                (coll? %) (into #{} %)
                :else %)
-        rvalue (rfn val)]
-    (loop [perms #{} rseen #{} rset rvalue r (first rvalue)]
-      (if (empty? rset) perms
-          (cond
-            ;; recursive role definition
-            (and (contains? role-map r)
-                 (not (contains? rseen r)))
-            (let [nroles (rfn (role-map r))
-                  nrset (apply conj rset nroles)
-                  nrset (disj nrset r)]
-              (recur perms (conj rseen r) nrset (first nrset)))
+        role-value (rfn val)]
+    (loop [perms #{}
+           roles-seen #{}
+           roles-set role-value
+           role (first role-value)]
 
-            ;; already explored role
-            (and (contains? role-map r)
-                 (contains? rseen r))
-            (let [nrset (disj rset r)]
-              (recur perms rseen nrset (first nrset)))
+      (if (empty? roles-set)
+        perms
 
-            ;; role that is not defined
-            (and (not (contains? role-map r))
-                 (.contains r "/"))
-            (let [nrset (disj rset r)]
-              (recur perms rseen nrset (first nrset)))
+        (cond
+          ;; recursive role definition
+          (and (contains? role-map role)
+               (not (contains? roles-seen role)))
+          (let [nroles (rfn (role-map role))
+                nrset (apply conj roles-set nroles)
+                nrset (disj nrset role)]
+            (recur perms (conj roles-seen role)
+                   nrset (first nrset)))
 
-            :else
-            ;; permission
-            (let [nperms (conj perms (p/make-permission (if (keyword? r) (name r) r)))
-                  nrset (disj rset r)]
-              (recur nperms rseen nrset (first nrset))))))))
+          ;; already explored role
+          (and (contains? role-map role)
+               (contains? roles-seen role))
+          (let [nrset (disj roles-set role)]
+            (recur perms roles-seen
+                   nrset (first nrset)))
+
+          ;; role that is not defined
+          (and (not (contains? role-map role))
+               (.contains role "/"))
+          (let [nrset (disj roles-set role)]
+            (recur perms roles-seen
+                   nrset (first nrset)))
+
+          :else
+          ;; permission
+          (let [nperms (conj perms (p/make-permission (if (keyword? role) (name role) role)))
+                nrset (disj roles-set role)]
+            (recur nperms roles-seen
+                   nrset (first nrset))))))))
 
 (defn- sanitize-role-map [role-map]
   (into {} (map
