@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file. This change
 ### Changed
 - xxx.
 
+## [0.2.2-SNAPSHOT] - 2017-07-11
+### Fixed
+- Fixing Recursive roles definitions result in Stackoverflow. Thanks @anujsrc for providing a patch!
+
+
 ## [0.2.0-SNAPSHOT] - 2017-04-19
 ### Changed
 - Allowing hierarchies of roles. If one role contains another role in its values it

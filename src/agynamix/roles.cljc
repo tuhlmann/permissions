@@ -2,7 +2,8 @@
   (:require
     #?@(:clj [[agynamix.permissions :as p]]
         :cljs [[agynamix.permissions :as p :refer [Permission]]])
-    [clojure.set :refer [union]])
+    [clojure.set :refer [union]]
+    [clojure.string :as str])
   #?(:clj
      (:import [agynamix.permissions Permission])))
 
@@ -59,7 +60,7 @@
 
           ;; role that is not defined
           (and (not (contains? role-map role))
-               (.contains role "/"))
+               (str/includes? role "/"))
           (let [nrset (disj roles-set role)]
             (recur perms roles-seen
                    nrset (first nrset)))
